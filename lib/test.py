@@ -11,11 +11,13 @@
 # r = requests.post(url, json=payload)
 # print(r.status_code, r.text)
 
+
+
 from gradio_client import Client, handle_file
 
-client = Client("jayn95/deeepdent")
+client = Client("jayn95/deepdent_periodontitis")
 result = client.predict(
-	image=handle_file('https://raw.githubusercontent.com/gradio-app/gradio/main/test/test_files/bus.png'),
-	api_name="/predict"
+    handle_file("who.jpg"),
+    api_name="/predict"
 )
 print(result)

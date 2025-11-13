@@ -19,12 +19,14 @@ class _DetectionPeriodontitisScreenState
   bool _loading = false;
   Map<String, Uint8List?> _annotatedImages = {};
   String? _errorMessage;
+  String? _analysisSummary; // ---
 
   Future<void> _detectImage() async {
     setState(() {
       _loading = true;
       _annotatedImages.clear();
       _errorMessage = null;
+      _analysisSummary = null; // ---
     });
 
     const endpoint =
@@ -58,6 +60,10 @@ class _DetectionPeriodontitisScreenState
             _annotatedImages[label] = null;
           }
         });
+
+        if (json.containsKey("analysis")) { // ---
+          _analysisSummary = json["analysis"].toString(); // ---
+        } // ---
 
         setState(() {});
       } else if (json.containsKey("error")) {
@@ -111,8 +117,32 @@ class _DetectionPeriodontitisScreenState
                     ],
                   ),
             ],
+            if (_analysisSummary != null) ...[ // ---
+              const SizedBox(height: 10), // ---
+              const Text( // ---
+                "Analysis Summary:", // ---
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold), // ---
+              ), // ---
+              const SizedBox(height: 8), // ---
+              Container( // ---
+                width: double.infinity, // ---
+                padding: const EdgeInsets.all(12), // ---
+                decoration: BoxDecoration( // ---
+                  color: Colors.grey[200], // ---
+                  borderRadius: BorderRadius.circular(10), // ---
+                ), // ---
+                child: Text( // ---
+                  _analysisSummary!, // ---
+                  style: const TextStyle(fontSize: 14), // ---
+                ), // ---
+              ), // ---
+              const SizedBox(height: 20), // ---
+            ], // ---
             if (_errorMessage != null)
-              Text(_errorMessage!, style: const TextStyle(color: Colors.red)),
+              Text(
+                _errorMessage!,
+                style: const TextStyle(color: Colors.red),
+              ),
           ],
         ),
       ),

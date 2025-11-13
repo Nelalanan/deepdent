@@ -10,7 +10,6 @@ PERIODONTITIS_SPACE = "jayn95/deepdent_periodontitis"
 
 
 def call_huggingface(space_name, image_path, labels=None, flatten=False, timeout_seconds=120):
-    """Call HF Space in a separate thread with timeout."""
     client = Client(space_name)
     result_container = {}
 
@@ -31,18 +30,26 @@ def call_huggingface(space_name, image_path, labels=None, flatten=False, timeout
 
     result = result_container.get("data", [])
 
-    # Flatten nested list if needed
-    if flatten:
-        flat_result = []
-        for r in result:
-            if isinstance(r, (list, tuple)):
-                flat_result.extend(r)
-            else:
-                flat_result.append(r)
-    else:
-        flat_result = result
+    # --- handle analysis text
+    analysis_text = None  # ---
+    if isinstance(result, (list, tuple)):  # ---
+        if isinstance(result[-1], str) and len(result) > 1:  # ---
+            analysis_text = result[-1]  # ---
+            flat_result = result[:-1]  # ---
+        else:  # ---
+            flat_result = result  # ---
+    else:  # ---
+        flat_result = [result]  # ---
 
-    # Auto-generate labels if None
+    if flatten:
+        flattened = []
+        for r in flat_result:
+            if isinstance(r, (list, tuple)):
+                flattened.extend(r)
+            else:
+                flattened.append(r)
+        flat_result = flattened
+
     if labels is None:
         labels = []
         if space_name == PERIODONTITIS_SPACE:
@@ -53,7 +60,6 @@ def call_huggingface(space_name, image_path, labels=None, flatten=False, timeout
         else:
             labels = [f"output{i+1}" for i in range(len(flat_result))]
 
-    # Encode files as base64
     encoded_results = {}
     for label, path in zip(labels, flat_result):
         if os.path.exists(path):
@@ -62,7 +68,10 @@ def call_huggingface(space_name, image_path, labels=None, flatten=False, timeout
         else:
             encoded_results[label] = None
 
-    return encoded_results
+    return {  # ---
+        "images": encoded_results,  # ---
+        "analysis": analysis_text  # ---
+    }  # ---
 
 
 @app.route("/predict/gingivitis", methods=["POST"])
@@ -76,14 +85,14 @@ def predict_gingivitis():
             image.save(temp_file.name)
             temp_path = temp_file.name
 
-        encoded_results = call_huggingface(
-            GINGIVITIS_SPACE,
-            temp_path,
-            labels=["swelling", "redness", "bleeding"]
-        )
+        result = call_huggingface(  # ---
+            GINGIVITIS_SPACE,  # ---
+            temp_path,  # ---
+            labels=["swelling", "redness", "bleeding"]  # ---
+        )  # ---
 
         os.remove(temp_path)
-        return jsonify({"images": encoded_results})
+        return jsonify(result)  # ---
 
     except TimeoutError as te:
         return jsonify({"error": str(te)}), 500
@@ -102,15 +111,15 @@ def predict_periodontitis():
             image.save(temp_file.name)
             temp_path = temp_file.name
 
-        encoded_results = call_huggingface(
-            PERIODONTITIS_SPACE,
-            temp_path,
-            labels=None,  # let function handle auto-labels
-            flatten=True
-        )
+        result = call_huggingface(  # ---
+            PERIODONTITIS_SPACE,  # ---
+            temp_path,  # ---
+            labels=None,  # ---
+            flatten=True  # ---
+        )  # ---
 
         os.remove(temp_path)
-        return jsonify({"images": encoded_results})
+        return jsonify(result)  # ---
 
     except TimeoutError as te:
         return jsonify({"error": str(te)}), 500
